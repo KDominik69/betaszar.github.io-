@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Űrhajós Lövöldözős Játék</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: black;
+            color: white;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            margin: 0 auto;
+            background: radial-gradient(circle, #1a1a1a, #000);
+            border: 2px solid white;
+        }
+
+        .controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+        }
+
+        button {
+            margin: 5px;
+            padding: 10px;
+            background-color: #333;
+            color: white;
+            border: 1px solid white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #555;
+        }
+
+        .disabled {
+            text-decoration: line-through;
+            color: gray;
+        }
+
+        .message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            color: white;
+            display: none;
+        }
+
+        .skin-container {
+            position: absolute;
+            top: 100px;
+            right: 10px;
+            color: white;
+        }
+
+        .skin {
+            margin: 10px;
+            padding: 10px;
+            border: 1px solid white;
+            text-align: center;
+        }
+
+        .skin-button {
+            margin-top: 5px;
+            padding: 5px;
+            background-color: #333;
+            color: white;
+            border: 1px solid white;
+            cursor: pointer;
+        }
+
+        .skin-button:hover {
+            background-color: #555;
+        }
+
+        .active {
+            background-color: green;
+        }
+
+        .inactive {
+            background-color: red;
+        }
+
+        #restartButton {
+            display: none; /* Kezdetben rejtve */
+            position: absolute;
+            top: 60%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 10px 20px;
+            background-color: #333;
+            color: white;
+            border: 1px solid white;
+            cursor: pointer;
+            font-size: 20px;
+        }
+
+        #restartButton:hover {
+            background-color: #555;
+        }
+    </style>
+</head>
+<body>
+    
+    <div class="controls">
+        <button id="upgradeShield">Pajzs fejlesztése (20 coin)</button>
+        <button id="upgradeDamage">Lövés fejlesztése (20 coin)</button>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+    <div class="message" id="messageBox"></div>
+    <button id="restartButton">Új játék</button>
+
+    <div class="skin-container">
+        <div class="skin">
+            <h3>Skin 1000 coin</h3>
+            <div id="skin1Status">Zárva</div>
+            <button id="buySkin1" class="skin-button">Vásárlás (1000 coin)</button>
+            <button id="toggleSkin1" class="skin-button" style="display:none;">Hozzáad</button>
+        </div>
+        <div class="skin">
+            <h3>Skin 2000 coin</h3>
+            <div id="skin2Status">Zárva</div>
+            <button id="buySkin2" class="skin-button">Vásárlás (2000 coin)</button>
+            <button id="toggleSkin2" class="skin-button" style="display:none;">Hozzáad</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = 600;
+        canvas.height = 800;
+
+        const images = {};
+        function loadImages() {
+            images.spaceship = new Image();
+            images.spaceship.src = 'spaceship.png';
+
+            images.spaceship1 = new Image();
+            images.spaceship1.src = 'spaceship1.png';
+
+            images.hellokitty = new Image();
+            images.hellokitty.src = 'hellokitty.png';
+
+            images.enemyRed = new Image();
+            images.enemyRed.src = 'enemy_red.png';
+
+            images.enemyBlue = new Image();
+            images.enemyBlue.src = 'enemy_blue.png';
+
+            images.enemyGreen = new Image();
+            images.enemyGreen.src = 'enemy_green.png';
+
+            images.enemyPurple = new Image();
+            images.enemyPurple.src = 'enemy_purple.png';
+        }
+
+        loadImages();
+
+        let spaceship = {
+            x: canvas.width / 2 - 25,
+            y: canvas.height - 100,
+            width: 50,
+            height: 50,
+            speed: 7,
+            shieldLevel: 1,
+            shieldActive: false,
+            damageLevel: 1,
+            shieldCooldown: false,
+            canShoot: true,
+            currentSkin: 'spaceship' 
+        };
+
+        let bullets = [];
+        let enemies = [];
+        let boss = null;
+        let bossBullets = [];
+        let enemyTypes = [
+            { image: 'enemyRed', speed: 2, health: 1, reward: 10 },
+            { image: 'enemyBlue', speed: 3, health: 2, reward: 20 },
+            { image: 'enemyGreen', speed: 1.5, health: 3, reward: 30 },
+            { image: 'enemyPurple', speed: 4, health: 4, reward: 40 }
+        ];
+        let lastEnemySpawn = 0;
+        let enemySpawnInterval = 1500;
+        let score = 0;
+        let coins = 0;
+
+        const shieldDurations = [0, 5000, 10000, 30000]; 
+
+        const keys = {
+            up: false,
+            down: false,
+            left: false,
+            right: false,
+            shoot: false
+        };
+
+        let bossSpawned = false; // Új változó a boss állapotának nyomon követésére
+        let bossType = 0; // 0: 200 HP, 1: 400 HP, 2: 600 HP
+        let firstBossDefeated = false; // Nyomon követi, hogy az első boss legyőzve lett-e
+
+        function drawSpaceship() {
+            ctx.drawImage(images[spaceship.currentSkin], spaceship.x, spaceship.y, spaceship.width, spaceship.height);
+            
+            if (spaceship.shieldActive) {
+                ctx.beginPath();
+                ctx.arc(
+                    spaceship.x + spaceship.width / 2,
+                    spaceship.y + spaceship.height / 2,
+                    40,
+                    0,
+                    Math.PI * 2
+                );
+                ctx.strokeStyle = 'cyan';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
+        }
+
+        function getBulletColor(level) {
+            switch (level) {
+                case 1: return 'yellow'; 
+                case 2: return 'purple'; 
+                case 3: return 'green';  
+                case 4: return 'red';   
+                default: return 'yellow';
+            }
+        }
+
+        function drawBullets() {
+            bullets.forEach(bullet => {
+                ctx.fillStyle = getBulletColor(spaceship.damageLevel); 
+                ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+            });
+            bossBullets.forEach(bullet => {
+                ctx.fillStyle = 'red'; 
+                ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+            });
+        }
+
+        function drawEnemies() {
+            enemies.forEach(enemy => {
+                ctx.drawImage(images[enemy.image], enemy.x, enemy.y, 30, 30);
+            });
+        }
+
+        function drawBoss() {
+            if (boss) {
+                ctx.fillStyle = 'darkred';
+                ctx.fillRect(boss.x, boss.y, boss.width, boss.height);
+                ctx.fillStyle = 'white';
+                ctx.fillText(`HP: ${boss.health}`, boss.x, boss.y - 5); 
+            }
+        }
+
+        function updateBullets() {
+            bullets.forEach((bullet, index) => {
+                bullet.y -= bullet.speed;
+                if (bullet.y < 0) {
+                    bullets.splice(index, 1);
+                }
+            });
+
+            bossBullets.forEach((bullet, index) => {
+                bullet.y += bullet.speed; 
+                if (bullet.y > canvas.height) {
+                    bossBullets.splice(index, 1);
+                }
+            });
+        }
+
+        function updateEnemies() {
+            if (Date.now() - lastEnemySpawn > enemySpawnInterval) {
+                let type = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+                enemies.push({
+                    x: Math.random() * (canvas.width - 30),
+                    y: -30,
+                    health: type.health,
+                    image: type.image,
+                    reward: type.reward,
+                    speedX: Math.random() > 0.5 ? type.speed : -type.speed,
+                    speedY: type.speed
+                });
+                lastEnemySpawn = Date.now();
+            }
+
+            enemies.forEach((enemy, index) => {
+                enemy.x += enemy.speedX;
+                enemy.y += enemy.speedY;
+                if (enemy.x < 0 || enemy.x > canvas.width - 30) enemy.speedX *= -1;
+                if (enemy.y > canvas.height) enemies.splice(index, 1);
+            });
+        }
+
+        function spawnBoss() {
+            if (bossSpawned) return; // Ha a boss már megjelent, ne csinálj semmit
+
+            let bossHealth;
+            if (bossType === 0) {
+                bossHealth = 200; // 500 pontnál
+            } else if (bossType === 1) {
+                bossHealth = 400; // 1000 pontnál
+            } else if (bossType === 2) {
+                bossHealth = 600; // 1500 pontnál
+            }
+
+            boss = {
+                x: canvas.width / 2 - 25,
+                y: 50,
+                width: 50,
+                height: 50,
+                health: bossHealth,
+                speed: 2 // Boss sebessége
+            };
+
+            bossSpawned = true; // A boss megjelent
+        }
+
+        function updateBoss() {
+            if (boss) {
+                // Boss mozgása jobbra-balra
+                boss.x += boss.speed;
+                if (boss.x <= 0 || boss.x >= canvas.width - boss.width) {
+                    boss.speed *= -1; // Visszafordulás
+                }
+            }
+        }
+
+        function bossShoot() {
+            if (boss) {
+                bossBullets.push({
+                    x: boss.x + boss.width / 2 - 2.5,
+                    y: boss.y + boss.height,
+                    width: 5,
+                    height: 10,
+                    speed: 5
+                });
+            }
+        }
+
+        function checkCollisions() {
+            enemies.forEach((enemy, eIndex) => {
+                bullets.forEach((bullet, bIndex) => {
+                    if (
+                        bullet.x < enemy.x + 30 &&
+                        bullet.x + bullet.width > enemy.x &&
+                        bullet.y < enemy.y + 30 &&
+                        bullet.y + bullet.height > enemy.y
+                    ) {
+                        enemy.health -= spaceship.damageLevel;
+                        bullets.splice(bIndex, 1);
+
+                        if (enemy.health <= 0) {
+                            enemies.splice(eIndex, 1);
+                            coins += enemy.reward;
+                            score += 10;
+                        }
+                    }
+                });
+
+                if (
+                    spaceship.x < enemy.x + 30 &&
+                    spaceship.x + spaceship.width > enemy.x &&
+                    spaceship.y < enemy.y + 30 &&
+                    spaceship.y + spaceship.height > enemy.y
+                ) {
+                    enemies.splice(eIndex, 1);
+                    if (!spaceship.shieldActive) {
+                        alert(`Game Over! Score: ${score}`);
+                        document.location.reload();
+                    }
+                }
+            });
+
+            // Check collisions with boss bullets
+            bossBullets.forEach((bullet, bIndex) => {
+                if (
+                    bullet.x < spaceship.x + spaceship.width &&
+                    bullet.x + bullet.width > spaceship.x &&
+                    bullet.y < spaceship.y + spaceship.height &&
+                    bullet.y + bullet.height > spaceship.y
+                ) {
+                    bossBullets.splice(bIndex, 1);
+                    if (!spaceship.shieldActive) {
+                        alert(`Game Over! Score: ${score}`);
+                        document.location.reload();
+                    }
+                }
+            });
+
+            // Check collisions with boss
+            if (boss) {
+                bullets.forEach((bullet, bIndex) => {
+                    if (
+                        bullet.x < boss.x + boss.width &&
+                        bullet.x + bullet.width > boss.x &&
+                        bullet.y < boss.y + boss.height &&
+                        bullet.y + bullet.height > boss.y
+                    ) {
+                        boss.health -= spaceship.damageLevel;
+                        bullets.splice(bIndex, 1);
+
+                        if (boss.health <= 0) {
+                            boss = null; // Boss legyőzve
+                            bossSpawned = false; // A boss legyőzése után visszaállítjuk az állapotot
+                            score += 50; // Extra pont a boss legyőzéséért
+                            bossType++; // Következő boss típusa
+
+                            // Ha a harmadik boss legyőzve, a játék véget ér
+                            if (bossType > 2) {
+                                showMessage("A Föld megmenekült! Hála neked!!!");
+                                endGame(); // Játék leállítása
+                            } else if (bossType === 1) {
+                                firstBossDefeated = true; // Az első boss legyőzve
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function endGame() {
+            // Játék leállítása
+            cancelAnimationFrame(gameLoop);
+            document.getElementById('restartButton').style.display = 'block'; // Új játék gomb megjelenítése
+        }
+
+        function activateShield() {
+            if (!spaceship.shieldActive && !spaceship.shieldCooldown) {
+                spaceship.shieldActive = true;
+                spaceship.shieldCooldown = true;
+
+                setTimeout(() => {
+                    spaceship.shieldActive = false;
+                }, shieldDurations[spaceship.shieldLevel]);
+
+                setTimeout(() => {
+                    spaceship.shieldCooldown = false;
+                }, 120000); // 2-minute cooldown
+            }
+        }
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Update spaceship position based on key states
+            if (keys.up && spaceship.y > 0) spaceship.y -= spaceship.speed;
+            if (keys.down && spaceship.y < canvas.height - spaceship.height) spaceship.y += spaceship.speed;
+            if (keys.left && spaceship.x > 0) spaceship.x -= spaceship.speed;
+            if (keys.right && spaceship.x < canvas.width - spaceship.width) spaceship.x += spaceship.speed;
+
+            drawSpaceship();
+            drawBullets();
+            drawEnemies();
+            drawBoss();
+
+            updateBullets();
+            updateEnemies();
+            updateBoss(); // Boss frissítése
+            checkCollisions();
+
+            // Boss megjelenítése 500, 1000 és 1500 pont után
+            if (score >= 500 && bossType === 0 && !boss && !firstBossDefeated) {
+                spawnBoss();
+            } else if (score >= 1000 && bossType === 1 && !boss) {
+                spawnBoss();
+            } else if (score >= 1500 && bossType === 2 && !boss) {
+                spawnBoss();
+            }
+
+            // Boss lövöldözése
+            if (boss) {
+                if (Math.random() < 0.02) { // 2% eséllyel lövöldöz
+                    bossShoot();
+                }
+            }
+
+            ctx.fillStyle = 'white';
+            ctx.fillText(`Score: ${score}`, 10, 20);
+            ctx.fillText(`Coins: ${coins}`, 10, 40);
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Event Listeners
+        window.addEventListener('keydown', e => {
+            if (e.key === 'ArrowUp' || e.key === 'w') keys.up = true;
+            if (e.key === 'ArrowDown' || e.key === 's') keys.down = true;
+            if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = true;
+            if (e.key === 'ArrowRight' || e.key === 'd') keys.right = true;
+            if (e.key === ' ') {
+                if (spaceship.canShoot) {
+                    bullets.push({
+                        x: spaceship.x + spaceship.width / 2 - 2.5,
+                        y: spaceship.y,
+                        width: 5,
+                        height: 10,
+                        speed: 10
+                    });
+                    spaceship.canShoot = false; // Prevent immediate shooting
+                }
+            }
+            if (e.key === 'f') {
+                activateShield();
+            }
+        });
+
+        window.addEventListener('keyup', e => {
+            if (e.key === 'ArrowUp' || e.key === 'w') keys.up = false;
+            if (e.key === 'ArrowDown' || e.key === 's') keys.down = false;
+            if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = false;
+            if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false;
+        });
+
+        document.getElementById('restartButton').addEventListener('click', () => {
+            // Játék újraindítása
+            document.location.reload();
+        });
+
+        function updateButtonLabels() {
+            const shieldButton = document.getElementById('upgradeShield');
+            const damageButton = document.getElementById('upgradeDamage');
+
+            let shieldCost = 0;
+            if (spaceship.shieldLevel === 1) shieldCost = 20;
+            else if (spaceship.shieldLevel === 2) shieldCost = 40;
+            else if (spaceship.shieldLevel === 3) shieldCost = 100;
+
+            let damageCost = 0;
+            if (spaceship.damageLevel === 1) damageCost = 20;
+            else if (spaceship.damageLevel === 2) damageCost = 40;
+            else if (spaceship.damageLevel === 3) damageCost = 100;
+
+            shieldButton.innerText = `Pajzs fejlesztése (${shieldCost} coin)`;
+            damageButton.innerText = `Lövés fejlesztése (${damageCost} coin)`;
+        }
+
+        document.getElementById('upgradeShield').addEventListener('click', () => {
+            let cost = 0;
+            if (spaceship.shieldLevel === 1) cost = 20;
+            else if (spaceship.shieldLevel === 2) cost = 40;
+            else if (spaceship.shieldLevel === 3) cost = 100;
+
+            if (spaceship.shieldLevel < 3 && coins >= cost) { // Max 3 szint
+                coins -= cost;
+                spaceship.shieldLevel++;
+                showMessage(`Gratulálok! Pajzs szint: ${spaceship.shieldLevel}`);
+                updateShieldButton(); // Update button state after upgrade
+                updateButtonLabels(); // Update button labels after upgrade
+            }
+        });
+
+        document.getElementById('upgradeDamage').addEventListener('click', () => {
+            let cost = 0;
+            if (spaceship.damageLevel === 1) cost = 20;
+            else if (spaceship.damageLevel === 2) cost = 40;
+            else if (spaceship.damageLevel === 3) cost = 100;
+
+            if (spaceship.damageLevel < 4 && coins >= cost) {
+                coins -= cost;
+                spaceship.damageLevel++;
+                showMessage(`Gratulálok! Lövés szint: ${spaceship.damageLevel}`);
+                updateDamageButton(); // Update button state after upgrade
+                updateButtonLabels(); // Update button labels after upgrade
+            }
+        });
+
+        function updateDamageButton() {
+            const damageButton = document.getElementById('upgradeDamage');
+            if (spaceship.damageLevel >= 4) {
+                damageButton.classList.add('disabled');
+                damageButton.disabled = true; // Disable the button
+            }
+        }
+
+        function updateShieldButton() {
+            const shieldButton = document.getElementById('upgradeShield');
+            if (spaceship.shieldLevel >= 3) { // Max 3 szint
+                shieldButton.classList.add('disabled');
+                shieldButton.disabled = true; // Disable the button
+            }
+        }
+
+        function showMessage(message) {
+            const messageBox = document.getElementById('messageBox');
+            messageBox.innerText = message;
+            messageBox.style.display = 'block';
+            setTimeout(() => {
+                messageBox.style.display = 'none';
+            }, 3000); // Hide message after 3 seconds
+        }
+
+        // Allow shooting again after a short delay
+        setInterval(() => {
+            spaceship.canShoot = true; // Allow shooting again
+        }, 150); 
+
+        // Skin management
+        let skin1Unlocked = false;
+        let skin2Unlocked = false;
+        let skin1Active = false;
+        let skin2Active = false;
+
+        document.getElementById('buySkin1').addEventListener('click', () => {
+            if (coins >= 1000 && !skin1Unlocked) {
+                coins -= 1000;
+                skin1Unlocked = true;
+                document.getElementById('skin1Status').innerText = "Megvásárolva";
+                document.getElementById('toggleSkin1').style.display = 'block';
+                showMessage("Skin 1000 coin megvásárolva!");
+            }
+        });
+
+        document.getElementById('toggleSkin1').addEventListener('click', () => {
+            skin1Active = !skin1Active;
+            if (skin1Active) {
+                spaceship.currentSkin = 'spaceship1';
+                document.getElementById('toggleSkin1').innerText = "Levesz";
+                document.getElementById('toggleSkin1').classList.add('active');
+            } else {
+                spaceship.currentSkin = 'spaceship';
+                document.getElementById('toggleSkin1').innerText = "Hozzáad";
+                document.getElementById('toggleSkin1').classList.remove('active');
+            }
+        });
+
+        document.getElementById('buySkin2').addEventListener('click', () => {
+            if (coins >= 2000 && !skin2Unlocked) {
+                coins -= 2000;
+                skin2Unlocked = true;
+                document.getElementById('skin2Status').innerText = "Megvásárolva";
+                document.getElementById('toggleSkin2').style.display = 'block';
+                showMessage("Skin 2000 coin megvásárolva!");
+            }
+        });
+
+        document.getElementById('toggleSkin2').addEventListener('click', () => {
+            skin2Active = !skin2Active;
+            if (skin2Active) {
+                spaceship.currentSkin = 'hellokitty';
+                document.getElementById('toggleSkin2').innerText = "Levesz";
+                document.getElementById('toggleSkin2').classList.add('active');
+            } else {
+                spaceship.currentSkin = 'spaceship';
+                document.getElementById('toggleSkin2').innerText = "Hozzáad";
+                document.getElementById('toggleSkin2').classList.remove('active');
+            }
+        });
+
+        // Initialize button labels
+        updateButtonLabels();
+
+        // Start the game loop
+        gameLoop();
+    </script>
+</body>
+</html>
