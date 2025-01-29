@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Űrhajós Lövöldözős Játék</title>
     <style>
-          * {
+        * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
@@ -37,6 +37,10 @@
             padding: 15px;
             border-radius: 10px;
             box-shadow: 0 0 10px cyan;
+        }
+
+        .controls p {
+            margin: 5px 0;
         }
 
         button {
@@ -89,14 +93,10 @@
             box-shadow: 0 0 15px rgba(255, 75, 43, 0.8);
         }
 
-        
-
         .disabled {
             text-decoration: line-through;
             color: gray;
         }
-
-        
 
         .skin-container {
             position: absolute;
@@ -133,12 +133,30 @@
             background-color: red;
         }
 
-       
-        
+        .controls-description {
+            position: absolute;
+            top: 100px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px cyan;
+            font-size: 27.9px;
+        }
     </style>
 </head>
 <body>
     
+    <div class="controls-description">
+        <h3>Irányítás</h3>
+        <p><strong>Felfelé:</strong> Flecha arriba (↑) vagy W</p>
+        <p><strong>Lefelé:</strong> Flecha abajo (↓) vagy S</p>
+        <p><strong>Balra:</strong> Flecha izquierda (←) vagy A</p>
+        <p><strong>Jobbra:</strong> Flecha derecha (→) vagy D</p>
+        <p><strong>Lövés:</strong> Space</p>
+        <p><strong>Pajzs aktiválása:</strong> F</p>
+    </div>
+
     <div class="controls">
         <button id="upgradeShield">Pajzs fejlesztése (20 coin)</button>
         <button id="upgradeDamage">Lövés fejlesztése (20 coin)</button>
@@ -213,7 +231,7 @@
         let enemies = [];
         let boss = null;
         let bossBullets = [];
-        let enemyRedBullets = []; // Létrehozunk egy tömböt az enemy_red lövedékeinek
+        let enemyRedBullets = [];
         let enemyTypes = [
             { image: 'enemyRed', speed: 2, health: 1, reward: 5 },
             { image: 'enemyBlue', speed: 3, health: 2, reward: 7 },
@@ -238,6 +256,7 @@
         let bossSpawned = false; 
         let bossType = 0; 
         let firstBossDefeated = false; 
+        let gameRunning = true; // Játék állapotának nyomon követése
 
         function drawSpaceship() {
             ctx.drawImage(images[spaceship.currentSkin], spaceship.x, spaceship.y, spaceship.width, spaceship.height);
@@ -276,7 +295,7 @@
                 ctx.fillStyle = 'red'; 
                 ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
             });
-            enemyRedBullets.forEach(bullet => { // Kirajzoljuk az enemy_red lövedékeket
+            enemyRedBullets.forEach(bullet => {
                 ctx.fillStyle = 'red';
                 ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
             });
@@ -312,18 +331,18 @@
                 }
             });
 
-            enemyRedBullets.forEach((bullet, index) => { // Frissítjük az enemy_red lövedékeket
-                bullet.y += bullet.speed; // A lövedék lefelé mozog
+            enemyRedBullets.forEach((bullet, index) => {
+                bullet.y += bullet.speed; 
                 if (bullet.y > canvas.height) {
-                    enemyRedBullets.splice(index, 1); // Ha a lövedék elérte a vászon alját, eltávolítjuk
+                    enemyRedBullets.splice(index, 1); 
                 }
             });
         }
 
-        function enemyRedShoot(enemy) { // Funkció az enemy_red lövéseinek kezelésére
+        function enemyRedShoot(enemy) {
             enemyRedBullets.push({
-                x: enemy.x + 12.5, // Középre helyezzük a lövedéket
-                y: enemy.y + 30, // Az enemy alá helyezzük
+                x: enemy.x + 12.5, 
+                y: enemy.y + 30, 
                 width: 5,
                 height: 10,
                 speed: 5
@@ -352,7 +371,6 @@
                 if (enemy.x < 0 || enemy.x > canvas.width - 30) enemy.speedX *= -1;
                 if (enemy.y > canvas.height) enemies.splice(index, 1);
                 
-                // Ellenőrizzük, hogy az enemy_red lövöldözik-e
                 if (enemy.image === 'enemyRed' && Date.now() % 2000 < 50) {
                     enemyRedShoot(enemy);
                 }
@@ -360,7 +378,7 @@
         }
 
         function spawnBoss() {
-            if (bossSpawned) return; // Ha a boss már megjelent, ne csinálj semmit
+            if (bossSpawned) return; 
 
             let bossHealth;
             if (bossType === 0) {
@@ -432,13 +450,13 @@
                 ) {
                     enemies.splice(eIndex, 1);
                     if (!spaceship.shieldActive) {
-                        alert(`Game Over! Score: ${score}`);
-                        document.location.reload();
+                        showMessage(`Game Over! Score: ${score}`);
+                        gameRunning = false; // Játék leállítása
+                        document.getElementById('restartButton').style.display = 'block'; // Új játék gomb megjelenítése
                     }
                 }
             });
 
-            // Check collisions with boss bullets
             bossBullets.forEach((bullet, bIndex) => {
                 if (
                     bullet.x < spaceship.x + spaceship.width &&
@@ -448,13 +466,13 @@
                 ) {
                     bossBullets.splice(bIndex, 1);
                     if (!spaceship.shieldActive) {
-                        alert(`Game Over! Score: ${score}`);
-                        document.location.reload();
+                        showMessage(`Game Over! Score: ${score}`);
+                        gameRunning = false; // Játék leállítása
+                        document.getElementById('restartButton').style.display = 'block'; // Új játék gomb megjelenítése
                     }
                 }
             });
 
-            // Check collisions with enemy red bullets
             enemyRedBullets.forEach((bullet, bIndex) => {
                 if (
                     bullet.x < spaceship.x + spaceship.width &&
@@ -464,13 +482,13 @@
                 ) {
                     enemyRedBullets.splice(bIndex, 1);
                     if (!spaceship.shieldActive) {
-                        alert(`Game Over! Score: ${score}`);
-                        document.location.reload();
+                        showMessage(`Game Over! Score: ${score}`);
+                        gameRunning = false; // Játék leállítása
+                        document.getElementById('restartButton').style.display = 'block'; // Új játék gomb megjelenítése
                     }
                 }
             });
 
-            // Check collisions with boss
             if (boss) {
                 bullets.forEach((bullet, bIndex) => {
                     if (
@@ -483,17 +501,16 @@
                         bullets.splice(bIndex, 1);
 
                         if (boss.health <= 0) {
-                            boss = null; // Boss legyőzve
-                            bossSpawned = false; // A boss legyőzése után visszaállítjuk az állapotot
-                            score += 50; // Extra pont a boss legyőzéséért
-                            bossType++; // Következő boss típusa
+                            boss = null; 
+                            bossSpawned = false; 
+                            score += 50; 
+                            bossType++; 
 
-                            // Ha a harmadik boss legyőzve, a játék véget ér
                             if (bossType > 2) {
                                 showMessage("A Föld megmenekült! Hála neked!!!");
-                                endGame(); // Játék leállítása
+                                endGame(); 
                             } else if (bossType === 1) {
-                                firstBossDefeated = true; // Az első boss legyőzve
+                                firstBossDefeated = true; 
                             }
                         }
                     }
@@ -502,8 +519,7 @@
         }
 
         function endGame() {
-            // Játék leállítása
-            cancelAnimationFrame(gameLoop);
+            cancelAnimationFrame(gameLoop); // Játék leállítása
             document.getElementById('restartButton').style.display = 'block'; // Új játék gomb megjelenítése
         }
 
@@ -518,14 +534,15 @@
 
                 setTimeout(() => {
                     spaceship.shieldCooldown = false;
-                }, 120000); // 2-minute cooldown
+                }, 120000); 
             }
         }
 
         function gameLoop() {
+            if (!gameRunning) return; // Ha a játék le van állítva, ne folytasd
+
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Update spaceship position based on key states
             if (keys.up && spaceship.y > 0) spaceship.y -= spaceship.speed;
             if (keys.down && spaceship.y < canvas.height - spaceship.height) spaceship.y += spaceship.speed;
             if (keys.left && spaceship.x > 0) spaceship.x -= spaceship.speed;
@@ -538,10 +555,9 @@
 
             updateBullets();
             updateEnemies();
-            updateBoss(); // Boss frissítése
+            updateBoss(); 
             checkCollisions();
 
-            // Boss megjelenítése 500, 1000 és 1500 pont után
             if (score >= 500 && bossType === 0 && !boss && !firstBossDefeated) {
                 spawnBoss();
             } else if (score >= 1000 && bossType === 1 && !boss) {
@@ -550,9 +566,8 @@
                 spawnBoss();
             }
 
-            // Boss lövöldözése
             if (boss) {
-                if (Math.random() < 0.02) { // 2% eséllyel lövöldöz
+                if (Math.random() < 0.02) { 
                     bossShoot();
                 }
             }
@@ -564,7 +579,6 @@
             requestAnimationFrame(gameLoop);
         }
 
-        // Event Listeners
         window.addEventListener('keydown', e => {
             if (e.key === 'ArrowUp' || e.key === 'w') keys.up = true;
             if (e.key === 'ArrowDown' || e.key === 's') keys.down = true;
@@ -579,7 +593,7 @@
                         height: 10,
                         speed: 10
                     });
-                    spaceship.canShoot = false; // Prevent immediate shooting
+                    spaceship.canShoot = false; 
                 }
             }
             if (e.key === 'f') {
@@ -595,7 +609,6 @@
         });
 
         document.getElementById('restartButton').addEventListener('click', () => {
-            // Játék újraindítása
             document.location.reload();
         });
 
@@ -627,8 +640,8 @@
                 coins -= cost;
                 spaceship.shieldLevel++;
                 showMessage(`Gratulálok! Pajzs szint: ${spaceship.shieldLevel}`);
-                updateShieldButton(); // Update button state after upgrade
-                updateButtonLabels(); // Update button labels after upgrade
+                updateShieldButton(); 
+                updateButtonLabels(); 
             }
         });
 
@@ -642,8 +655,8 @@
                 coins -= cost;
                 spaceship.damageLevel++;
                 showMessage(`Gratulálok! Lövés szint: ${spaceship.damageLevel}`);
-                updateDamageButton(); // Update button state after upgrade
-                updateButtonLabels(); // Update button labels after upgrade
+                updateDamageButton(); 
+                updateButtonLabels(); 
             }
         });
 
@@ -651,15 +664,15 @@
             const damageButton = document.getElementById('upgradeDamage');
             if (spaceship.damageLevel >= 4) {
                 damageButton.classList.add('disabled');
-                damageButton.disabled = true; // Disable the button
+                damageButton.disabled = true; 
             }
         }
 
         function updateShieldButton() {
             const shieldButton = document.getElementById('upgradeShield');
-            if (spaceship.shieldLevel >= 3) { // Max 3 szint
+            if (spaceship.shieldLevel >= 3) {
                 shieldButton.classList.add('disabled');
-                shieldButton.disabled = true; // Disable the button
+                shieldButton.disabled = true; 
             }
         }
 
@@ -669,15 +682,13 @@
             messageBox.style.display = 'block';
             setTimeout(() => {
                 messageBox.style.display = 'none';
-            }, 3000); // Hide message after 3 seconds
+            }, 3000); 
         }
 
-        // Allow shooting again after a short delay
         setInterval(() => {
-            spaceship.canShoot = true; // Allow shooting again
+            spaceship.canShoot = true; 
         }, 150); 
 
-        // Skin management
         let skin1Unlocked = false;
         let skin2Unlocked = false;
         let skin1Active = false;
@@ -729,10 +740,7 @@
             }
         });
 
-        // Initialize button labels
         updateButtonLabels();
-
-        // Start the game loop
         gameLoop();
     </script>
 </body>
