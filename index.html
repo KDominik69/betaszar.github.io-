@@ -5,49 +5,55 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Űrhajós Lövöldözős Játék</title>
     <style>
-        * {
+          * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
         body {
-            background: black;
+            background: linear-gradient(90deg, #0f0c29, #302b63, #24243e);
             color: white;
-            font-family: Arial, sans-serif;
+            font-family: "Orbitron", sans-serif;
             overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
         }
 
         canvas {
             display: block;
-            margin: 0 auto;
             background: radial-gradient(circle, #1a1a1a, #000);
-            border: 2px solid white;
+            border: 3px solid cyan;
+            box-shadow: 0 0 15px cyan;
         }
 
         .controls {
             position: absolute;
-            top: 10px;
-            left: 10px;
-            color: white;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px cyan;
         }
 
         button {
             margin: 5px;
-            padding: 10px;
-            background-color: #333;
+            padding: 10px 20px;
+            background: linear-gradient(90deg, #ff416c, #ff4b2b);
             color: white;
-            border: 1px solid white;
+            border: none;
             cursor: pointer;
+            font-weight: bold;
+            border-radius: 5px;
+            box-shadow: 0 0 8px rgba(255, 65, 108, 0.8);
         }
 
         button:hover {
-            background-color: #555;
-        }
-
-        .disabled {
-            text-decoration: line-through;
-            color: gray;
+            background: linear-gradient(90deg, #ff4b2b, #ff416c);
+            box-shadow: 0 0 12px rgba(255, 75, 43, 0.8);
         }
 
         .message {
@@ -55,10 +61,42 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 24px;
-            color: white;
+            font-size: 28px;
+            color: cyan;
             display: none;
+            text-shadow: 0 0 10px cyan;
         }
+
+        #restartButton {
+            display: none;
+            position: absolute;
+            top: 60%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 15px 30px;
+            background: linear-gradient(90deg, #ff416c, #ff4b2b);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 24px;
+            font-weight: bold;
+            border-radius: 10px;
+            box-shadow: 0 0 12px rgba(255, 65, 108, 0.8);
+        }
+
+        #restartButton:hover {
+            background: linear-gradient(90deg, #ff4b2b, #ff416c);
+            box-shadow: 0 0 15px rgba(255, 75, 43, 0.8);
+        }
+
+        
+
+        .disabled {
+            text-decoration: line-through;
+            color: gray;
+        }
+
+        
 
         .skin-container {
             position: absolute;
@@ -95,23 +133,8 @@
             background-color: red;
         }
 
-        #restartButton {
-            display: none; /* Kezdetben rejtve */
-            position: absolute;
-            top: 60%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            padding: 10px 20px;
-            background-color: #333;
-            color: white;
-            border: 1px solid white;
-            cursor: pointer;
-            font-size: 20px;
-        }
-
-        #restartButton:hover {
-            background-color: #555;
-        }
+       
+        
     </style>
 </head>
 <body>
