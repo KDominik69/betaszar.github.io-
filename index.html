@@ -501,18 +501,21 @@
                         bullets.splice(bIndex, 1);
 
                         if (boss.health <= 0) {
-                            boss = null; 
-                            bossSpawned = false; 
-                            score += 50; 
-                            bossType++; 
+    boss = null; 
+    bossSpawned = false; 
+    score += 50; 
+    bossType++; 
 
-                            if (bossType > 2) {
-                                showMessage("A Föld megmenekült! Hála neked!!!");
-                                endGame(); 
-                            } else if (bossType === 1) {
-                                firstBossDefeated = true; 
-                            }
-                        }
+    if (bossType > 2) {
+        showMessage("A Föld megmenekült! Hála neked!!!");
+        endGame(); 
+    } else if (bossType === 1) {
+        firstBossDefeated = true; 
+    } else {
+       
+        spawnBoss();
+    }
+}
                     }
                 });
             }
@@ -534,7 +537,7 @@
 
                 setTimeout(() => {
                     spaceship.shieldCooldown = false;
-                }, 120000); 
+                }, 60000); 
             }
         }
 
