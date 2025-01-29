@@ -431,6 +431,22 @@
                 }
             });
 
+            // Check collisions with enemy red bullets
+            enemyRedBullets.forEach((bullet, bIndex) => {
+                if (
+                    bullet.x < spaceship.x + spaceship.width &&
+                    bullet.x + bullet.width > spaceship.x &&
+                    bullet.y < spaceship.y + spaceship.height &&
+                    bullet.y + bullet.height > spaceship.y
+                ) {
+                    enemyRedBullets.splice(bIndex, 1);
+                    if (!spaceship.shieldActive) {
+                        alert(`Game Over! Score: ${score}`);
+                        document.location.reload();
+                    }
+                }
+            });
+
             // Check collisions with boss
             if (boss) {
                 bullets.forEach((bullet, bIndex) => {
