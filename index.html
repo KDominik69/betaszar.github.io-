@@ -190,11 +190,12 @@
         let enemies = [];
         let boss = null;
         let bossBullets = [];
+        let enemyRedBullets = []; // Létrehozunk egy tömböt az enemy_red lövedékeinek
         let enemyTypes = [
-            { image: 'enemyRed', speed: 2, health: 1, reward: 10 },
-            { image: 'enemyBlue', speed: 3, health: 2, reward: 20 },
-            { image: 'enemyGreen', speed: 1.5, health: 3, reward: 30 },
-            { image: 'enemyPurple', speed: 4, health: 4, reward: 40 }
+            { image: 'enemyRed', speed: 2, health: 1, reward: 5 },
+            { image: 'enemyBlue', speed: 3, health: 2, reward: 7 },
+            { image: 'enemyGreen', speed: 1.5, health: 3, reward: 9 },
+            { image: 'enemyPurple', speed: 4, health: 4, reward: 12 }
         ];
         let lastEnemySpawn = 0;
         let enemySpawnInterval = 1500;
@@ -211,9 +212,9 @@
             shoot: false
         };
 
-        let bossSpawned = false; // Új változó a boss állapotának nyomon követésére
-        let bossType = 0; // 0: 200 HP, 1: 400 HP, 2: 600 HP
-        let firstBossDefeated = false; // Nyomon követi, hogy az első boss legyőzve lett-e
+        let bossSpawned = false; 
+        let bossType = 0; 
+        let firstBossDefeated = false; 
 
         function drawSpaceship() {
             ctx.drawImage(images[spaceship.currentSkin], spaceship.x, spaceship.y, spaceship.width, spaceship.height);
@@ -252,6 +253,10 @@
                 ctx.fillStyle = 'red'; 
                 ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
             });
+            enemyRedBullets.forEach(bullet => { // Kirajzoljuk az enemy_red lövedékeket
+                ctx.fillStyle = 'red';
+                ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+            });
         }
 
         function drawEnemies() {
@@ -283,12 +288,29 @@
                     bossBullets.splice(index, 1);
                 }
             });
+
+            enemyRedBullets.forEach((bullet, index) => { // Frissítjük az enemy_red lövedékeket
+                bullet.y += bullet.speed; // A lövedék lefelé mozog
+                if (bullet.y > canvas.height) {
+                    enemyRedBullets.splice(index, 1); // Ha a lövedék elérte a vászon alját, eltávolítjuk
+                }
+            });
+        }
+
+        function enemyRedShoot(enemy) { // Funkció az enemy_red lövéseinek kezelésére
+            enemyRedBullets.push({
+                x: enemy.x + 12.5, // Középre helyezzük a lövedéket
+                y: enemy.y + 30, // Az enemy alá helyezzük
+                width: 5,
+                height: 10,
+                speed: 5
+            });
         }
 
         function updateEnemies() {
             if (Date.now() - lastEnemySpawn > enemySpawnInterval) {
                 let type = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
-                enemies.push({
+                let newEnemy = {
                     x: Math.random() * (canvas.width - 30),
                     y: -30,
                     health: type.health,
@@ -296,7 +318,8 @@
                     reward: type.reward,
                     speedX: Math.random() > 0.5 ? type.speed : -type.speed,
                     speedY: type.speed
-                });
+                };
+                enemies.push(newEnemy);
                 lastEnemySpawn = Date.now();
             }
 
@@ -305,6 +328,11 @@
                 enemy.y += enemy.speedY;
                 if (enemy.x < 0 || enemy.x > canvas.width - 30) enemy.speedX *= -1;
                 if (enemy.y > canvas.height) enemies.splice(index, 1);
+                
+                // Ellenőrizzük, hogy az enemy_red lövöldözik-e
+                if (enemy.image === 'enemyRed' && Date.now() % 2000 < 50) {
+                    enemyRedShoot(enemy);
+                }
             });
         }
 
@@ -313,11 +341,11 @@
 
             let bossHealth;
             if (bossType === 0) {
-                bossHealth = 200; // 500 pontnál
+                bossHealth = 200; 
             } else if (bossType === 1) {
-                bossHealth = 400; // 1000 pontnál
+                bossHealth = 400; 
             } else if (bossType === 2) {
-                bossHealth = 600; // 1500 pontnál
+                bossHealth = 600; 
             }
 
             boss = {
@@ -326,18 +354,17 @@
                 width: 50,
                 height: 50,
                 health: bossHealth,
-                speed: 2 // Boss sebessége
+                speed: 2 
             };
 
-            bossSpawned = true; // A boss megjelent
+            bossSpawned = true; 
         }
 
         function updateBoss() {
             if (boss) {
-                // Boss mozgása jobbra-balra
                 boss.x += boss.speed;
                 if (boss.x <= 0 || boss.x >= canvas.width - boss.width) {
-                    boss.speed *= -1; // Visszafordulás
+                    boss.speed *= -1; 
                 }
             }
         }
@@ -538,14 +565,14 @@
             const damageButton = document.getElementById('upgradeDamage');
 
             let shieldCost = 0;
-            if (spaceship.shieldLevel === 1) shieldCost = 20;
-            else if (spaceship.shieldLevel === 2) shieldCost = 40;
-            else if (spaceship.shieldLevel === 3) shieldCost = 100;
+            if (spaceship.shieldLevel === 1) shieldCost = 100;
+            else if (spaceship.shieldLevel === 2) shieldCost = 140;
+            else if (spaceship.shieldLevel === 3) shieldCost = 200;
 
             let damageCost = 0;
-            if (spaceship.damageLevel === 1) damageCost = 20;
-            else if (spaceship.damageLevel === 2) damageCost = 40;
-            else if (spaceship.damageLevel === 3) damageCost = 100;
+            if (spaceship.damageLevel === 1) damageCost = 100;
+            else if (spaceship.damageLevel === 2) damageCost = 140;
+            else if (spaceship.damageLevel === 3) damageCost = 200;
 
             shieldButton.innerText = `Pajzs fejlesztése (${shieldCost} coin)`;
             damageButton.innerText = `Lövés fejlesztése (${damageCost} coin)`;
@@ -553,11 +580,11 @@
 
         document.getElementById('upgradeShield').addEventListener('click', () => {
             let cost = 0;
-            if (spaceship.shieldLevel === 1) cost = 20;
-            else if (spaceship.shieldLevel === 2) cost = 40;
-            else if (spaceship.shieldLevel === 3) cost = 100;
+            if (spaceship.shieldLevel === 1) cost = 100;
+            else if (spaceship.shieldLevel === 2) cost = 140;
+            else if (spaceship.shieldLevel === 3) cost = 200;
 
-            if (spaceship.shieldLevel < 3 && coins >= cost) { // Max 3 szint
+            if (spaceship.shieldLevel < 3 && coins >= cost) { 
                 coins -= cost;
                 spaceship.shieldLevel++;
                 showMessage(`Gratulálok! Pajzs szint: ${spaceship.shieldLevel}`);
@@ -568,9 +595,9 @@
 
         document.getElementById('upgradeDamage').addEventListener('click', () => {
             let cost = 0;
-            if (spaceship.damageLevel === 1) cost = 20;
-            else if (spaceship.damageLevel === 2) cost = 40;
-            else if (spaceship.damageLevel === 3) cost = 100;
+            if (spaceship.damageLevel === 1) cost = 100;
+            else if (spaceship.damageLevel === 2) cost = 140;
+            else if (spaceship.damageLevel === 3) cost = 200;
 
             if (spaceship.damageLevel < 4 && coins >= cost) {
                 coins -= cost;
